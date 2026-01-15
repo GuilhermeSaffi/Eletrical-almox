@@ -1,0 +1,56 @@
+services:
+  app:
+    build:
+      context: .
+      target: prod
+    container_name: eletrical_system_app
+    ports:
+      - "3000:80"
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
+    networks:
+      - eletrical_network
+    restart: always
+
+  api:
+    build:
+      context: ./api
+    container_name: eletrical_system_api
+    environment:
+      - DATABASE_URL=postgresql://eletrical_admin:system_secure_pass@db:5432/eletrical_db?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - eletrical_network
+    restart: always
+
+  db:
+    image: postgres:17-alpine
+    container_name: eletrical_system_db
+    environment:
+      - POSTGRES_USER=eletrical_admin
+      - POSTGRES_PASSWORD=system_secure_pass
+      - POSTGRES_DB=eletrical_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eletrical_admin -d eletrical_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - eletrical_network
+    restart: always
+
+networks:
+  eletrical_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
